@@ -6,9 +6,9 @@
 
   let files = [];
   let keyword = "";
-  let algorithm = 1;
+  let algorithm = 0;
   let resultPromises = [];
-  let server = "localhost:3000";
+  let server = "http://localhost:3000/";
 
   function addFiles(list) {
     for (let i = 0; i < list.length; ++i) {
@@ -34,26 +34,20 @@
   function search() {
     resultPromises = [];
     for (let i = 0; i < files.length; ++i) {
-      resultPromises = [
-        ...resultPromises,
-        {
-          filename: files[i].filename,
-          promise: axios({
-            method: "get",
-            baseURL: server,
-            responseType: "json",
-            data: {
-              text: files[i].text,
-              keyword: keyword,
-              algorithm: algorithmList[algorithm]
-            }
-          })
-        }
-      ];
+      resultPromises.push({
+        filename: files[i].filename,
+        promise: axios({
+          method: "POST",
+          baseURL: server,
+          data: {
+            text: files[i].text,
+            keyword: keyword,
+            algorithm: algorithmList[algorithm]
+          }
+        })
+      });
     }
   }
-
-  $: console.log(resultPromises);
 </script>
 
 <div class="container mt-4">
@@ -86,12 +80,9 @@
               aria-controls={'collapse-' + file.id}>
               {file.filename}
             </button>
-            <span
-              type="button"
-              class="text-danger"
-              on:click={() => removeFile(file.id)}>
-              x
-            </span>
+            <button class="btn btn-danger" on:click={() => removeFile(file.id)}>
+              Hapus
+            </button>
           </h2>
         </div>
         <div
@@ -153,14 +144,17 @@
         </div>
       </div>
       <form class="form-inline">
-        <button class="btn btn-primary mr-2" on:click|preventDefault={search}>
+        <button
+          class="btn btn-primary mr-2"
+          on:click|preventDefault={search}
+          disabled={!server || !keyword || !files.length}>
           Cari
         </button>
         <input
           type="text"
           class="form-control"
           bind:value={server}
-          placeholder="API URL..." />
+          placeholder="API URL" />
       </form>
     </form>
   </div>
@@ -170,9 +164,9 @@
         {#await resultPromise.promise}
           Fetching jawaban...
         {:then result}
-          <p>{result}</p>
+          {console.log(result)}
         {:catch error}
-          <p class="text-danger">{error}</p>
+          <p class="text-danger">{error.response.data}</p>
         {/await}
       {/each}
     </div>
