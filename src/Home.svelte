@@ -9,6 +9,7 @@
   let algorithm = 0;
   let resultPromises = [];
   let server = "http://localhost:3000/";
+  let submittedKeywordLength = 0;
 
   function addFiles(list) {
     for (let i = 0; i < list.length; ++i) {
@@ -33,8 +34,10 @@
 
   function search() {
     resultPromises = [];
+    submittedKeywordLength = keyword.length;
     for (let i = 0; i < files.length; ++i) {
       resultPromises.push({
+        id: files[i].id,
         filename: files[i].filename,
         promise: axios({
           method: "POST",
@@ -61,7 +64,7 @@
     }} />
   <span>Tambahkan File</span>
 </label>
-<div class="accordion" id="accordion-parent">
+<div class="accordion">
   {#each files as file (file.id)}
     <div class="card">
       <div class="card-header" id="card-heading">
@@ -83,8 +86,7 @@
       <div
         id={'collapse-' + file.id}
         class="collapse"
-        aria-labelledby="card-heading"
-        data-parent="#accordion-parent">
+        aria-labelledby="card-heading">
         <pre class="card-body text-justify">{file.text}</pre>
       </div>
     </div>
@@ -150,17 +152,66 @@
   </form>
 </div>
 {#if resultPromises.length > 0}
-  <div class="mt-4">
+  <div class="accordion mt-4">
+    <hr />
+    <h4>Hasil:</h4>
     {#each resultPromises as resultPromise}
-      {#await resultPromise.promise}
-        Fetching jawaban...
-      {:then result}
-        {console.log(result)}
-      {:catch error}
-        <pre class="text-danger">
-          {@html error.response ? (error.response.data ? error.response.data : `Error ${error.response.status}`) : 'Unknown error occured!'}
-        </pre>
-      {/await}
+      <div class="card">
+        <div class="card-header" id="card-result-heading">
+          <h2
+            class="mb-0"
+            style="display: flex; justify-content: space-between;">
+            <button
+              class="btn btn-link"
+              type="button"
+              data-toggle="collapse"
+              data-target={`#collapse-result-${resultPromise.id}`}
+              aria-expanded="true"
+              aria-controls={'collapse-result-' + resultPromise.id}>
+              {resultPromise.filename}
+            </button>
+          </h2>
+        </div>
+        <div
+          id={'collapse-result-' + resultPromise.id}
+          class="collapse show"
+          aria-labelledby="card-result-heading">
+          {#await resultPromise.promise}
+            Fetching jawaban...
+          {:then result}
+            {#if result.data && result.data.length}
+              {#each result.data as data}
+                <div class="card">
+                  <div class="card-body">
+                    <b>Waktu:</b>
+                    {data.time}
+                    <br />
+                    <b>Jumlah:</b>
+                    {data.count}
+                    <br />
+                    <b>Kalimat:</b>
+                    <br />
+                    {@html data.sentence.substring(0, data.index_found) + data.sentence
+                        .substring(
+                          data.index_found,
+                          data.index_found + submittedKeywordLength
+                        )
+                        .bold() + data.sentence.substring(data.index_found + submittedKeywordLength)}
+                  </div>
+                </div>
+              {/each}
+            {:else}
+              <div class="card">
+                <div class="card-body">Pencarian tidak ditemukan.</div>
+              </div>
+            {/if}
+          {:catch error}
+            <pre class="text-danger">
+              {@html error.response ? (error.response.data ? error.response.data : `Error ${error.response.status}`) : 'Unknown error occured!'}
+            </pre>
+          {/await}
+        </div>
+      </div>
     {/each}
   </div>
 {/if}
